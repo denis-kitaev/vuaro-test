@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.db.models import Q
 
+import django_filters
 from rest_framework import viewsets, permissions, filters
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
@@ -8,7 +9,7 @@ from rest_condition import Or
 
 from .models import Application, CustomerProfile
 from .serializers import ApplicationSerializer, \
-    CustomerProfileSerializer
+    CustomerProfileSerializer, ApplicationDetailSerializer
 
 
 def user_is_partner(user):
@@ -50,15 +51,25 @@ class SuperUserAllowAll(permissions.BasePermission):
 
 
 class CustomerProfileFilter(filters.FilterSet):
+    score_min = django_filters.NumberFilter(name='score', lookup_type='gte')
+    score_max = django_filters.NumberFilter(name='score', lookup_type='lte')
+
     class Meta:
         model = CustomerProfile
-        fields = []
+        fields = [
+            'date_created', 'date_updated',
+            'full_name', 'birth_date',
+            'score_min', 'score_max'
+        ]
 
 
 class ApplicationFilter(filters.FilterSet):
     class Meta:
         model = Application
-        fields = []
+        fields = [
+            'date_created', 'date_updated',
+            'status', 'offer'
+        ]
 
 
 customer_profile_permission = Or(Or(PartnerCanView, PartnerCanCreate),
@@ -72,14 +83,24 @@ class CustomerProfileViewSet(viewsets.ModelViewSet):
     queryset = CustomerProfile.objects.all()
     permission_classes = [customer_profile_permission, ]
     filter_class = CustomerProfileFilter
+    filter_backends = (filters.OrderingFilter,)
+    ordering_fields = '__all__'
 
 
 class ApplicationViewSet(viewsets.ModelViewSet):
     serializer_class = ApplicationSerializer
-    queryset = Application.objects \
-        .select_related('offer__credit_organization').all()
     permission_classes = [application_permission, ]
     filter_class = ApplicationFilter
+    filter_backends = (filters.OrderingFilter,)
+    ordering_fields = '__all__'
+    queryset = Application.objects \
+        .select_related('offer__credit_organization') \
+        .select_related('customer_profile').all()
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return ApplicationDetailSerializer
+        return super(ApplicationViewSet, self).get_serializer_class()
 
     def get_queryset(self):
         queryset = super(ApplicationViewSet, self).get_queryset()

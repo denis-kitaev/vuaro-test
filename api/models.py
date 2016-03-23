@@ -50,13 +50,18 @@ class Offer(BaseModel):
     score_max = models.IntegerField(
         verbose_name=u'Максимальный скоринговый балл')
     credit_organization = models.ForeignKey(
-        CreditOrganization, verbose_name=u'Кредитная организация')  # TODO
+        CreditOrganization, verbose_name=u'Кредитная организация')
+
+    MORTGAGE = 'MORTGAGE'
+    CONSUMER = 'CONSUMER'
+    CAR = 'CAR'
+    SMSB = 'SMSB'
 
     OFFER_TYPE_CHOICES = (
-        ('MORTGAGE', u'Ипотека'),
-        ('CONSUMER', u'Потребительский'),
-        ('CAR', u'Автокредит'),
-        ('SMSB', u'КМСБ'),
+        (MORTGAGE, u'Ипотека'),
+        (CONSUMER, u'Потребительский'),
+        (CAR, u'Автокредит'),
+        (SMSB, u'КМСБ'),
     )
     offer_type = models.CharField(
         max_length=12, choices=OFFER_TYPE_CHOICES,

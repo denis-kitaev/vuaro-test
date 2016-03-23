@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 from django.db.models import Q
 
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, filters
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
-
-from rest_condition import C, And, Or, Not
+from rest_condition import Or
 
 from .models import Application, CustomerProfile
 from .serializers import ApplicationSerializer, \
@@ -22,14 +21,18 @@ def user_is_credit_organization(user):
 
 class PartnerCanView(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.method in permissions.SAFE_METHODS and \
-               user_is_partner(request.user)
+        return (
+            request.method in permissions.SAFE_METHODS and
+            user_is_partner(request.user)
+        )
 
 
 class PartnerCanCreate(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.method == 'POST' and \
-               user_is_partner(request.user)
+        return (
+            request.method == 'POST' and
+            user_is_partner(request.user)
+        )
 
 
 class CreditOrganizationCanView(permissions.BasePermission):
@@ -46,6 +49,18 @@ class SuperUserAllowAll(permissions.BasePermission):
         return request.user.is_superuser
 
 
+class CustomerProfileFilter(filters.FilterSet):
+    class Meta:
+        model = CustomerProfile
+        fields = []
+
+
+class ApplicationFilter(filters.FilterSet):
+    class Meta:
+        model = Application
+        fields = []
+
+
 customer_profile_permission = Or(Or(PartnerCanView, PartnerCanCreate),
                                  SuperUserAllowAll)
 application_permission = Or(Or(CreditOrganizationCanView, PartnerCanCreate),
@@ -56,6 +71,7 @@ class CustomerProfileViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerProfileSerializer
     queryset = CustomerProfile.objects.all()
     permission_classes = [customer_profile_permission, ]
+    filter_class = CustomerProfileFilter
 
 
 class ApplicationViewSet(viewsets.ModelViewSet):
@@ -63,6 +79,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     queryset = Application.objects \
         .select_related('offer__credit_organization').all()
     permission_classes = [application_permission, ]
+    filter_class = ApplicationFilter
 
     def get_queryset(self):
         queryset = super(ApplicationViewSet, self).get_queryset()
